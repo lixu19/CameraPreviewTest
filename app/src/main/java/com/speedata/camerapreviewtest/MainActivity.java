@@ -7,11 +7,8 @@ import android.content.DialogInterface;
 import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.media.AudioManager;
-import android.media.Image;
-import android.media.ImageReader;
 import android.media.SoundPool;
 import android.os.Bundle;
-import android.os.Handler;
 import android.util.Log;
 import android.view.Surface;
 import android.view.SurfaceHolder;
@@ -23,16 +20,21 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.speedata.camerapreviewtest.utils.BarcodeBounds;
+import com.speedata.camerapreviewtest.utils.BarcodeDrawView;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 
 import static com.speedata.camerapreviewtest.Utils.copyAssetsFile2Phone;
@@ -130,23 +132,29 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
 
     private static final String TAG = "jk";
 
-
-    private static final String KEY = "trial-speed-tjian-02282018";
-    private static final String PATH = "/data/data/com.example.cameradec";
     private TextView tvTimes;
     private int times;
+
+    /**
+     * 用于绘制。
+     */
+    private FrameLayout mFrameLayout;
+    private RelativeLayout relativeLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        //添加外层 自定义view
+        drawView = findViewById(R.id.codeView);
+        drawView.bringToFront();
+        relativeLayout = findViewById(R.id.relaView);
 
         surfaceview = findViewById(R.id.surfaceView1);
         mShowMessage = findViewById(R.id.textView1);
         tvTimes = findViewById(R.id.tv_1);
-//		test = findViewById(R.id.test);
-//		test.setOnClickListener(this);
+
         mScan = findViewById(R.id.bl);
         mScan.setOnClickListener(this);
         mSetPic = findViewById(R.id.br);
@@ -164,6 +172,9 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
         surfaceholder = surfaceview.getHolder();
         surfaceholder.addCallback(this);
 
+        surfaceview.setZOrderOnTop(false);
+
+
         int numofcam = Camera.getNumberOfCameras();
         if (numofcam > 1) {
             cansw = true;
@@ -174,20 +185,9 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
         soundPool = new SoundPool(2, AudioManager.STREAM_MUSIC, 0);
         soundId = soundPool.load("/system/media/audio/ui/VideoRecord.ogg", 0);
 
-/*		int ka = com.spd.code.CodeUtils.ActivateAPI("trial-speed-tjian-01222018".getBytes(), getFilesDir().getAbsolutePath().getBytes());
-		Log.e("jk", "path is " + getFilesDir().getAbsolutePath() + " result is " + ka);
-		
-		ka = com.spd.code.CodeUtils.IsActivated("trial-speed-tjian-01222018".getBytes(), getFilesDir().getAbsolutePath().getBytes());
-		Log.e("jk", "path is " + getFilesDir().getAbsolutePath() + " result is " + ka);
-*/
-        //if (!com.example.sdembeddeddemo.MainActivity.SD_Loaded)
-//		int code = CodeUtils.ActivateAPI(KEY.getBytes(), PATH.getBytes());
-//		Log.d(TAG, "onCreate: code is::" + code);
-
-        //todo 判断id文件是否存在,不存在就从软件中copy一个过去
+        //判断id文件是否存在,不存在就从软件中copy一个过去
         copyAssetsFile2Phone(this);
         inputId(this);
-
 
         if (!com.spd.code.CodeUtils.SD_Loaded) {
             //if (com.example.sdembeddeddemo.MainActivity.LoadSD() == 1)
@@ -260,24 +260,11 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
     }
 
     private int CodeEnable(int qr) {
-        // TODO Auto-generated method stub
         return 0;
     }
 
     @Override
     protected void onDestroy() {
-        // TODO Auto-generated method stub
-		
-/*		if(camera != null)
-		{
-			if(mScaning)
-			{
-				camera.stopPreview();
-			}
-			camera.release();
-			camera = null;
-		}
-*/
         soundPool.release();
         super.onDestroy();
 
@@ -286,28 +273,6 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
     @Override
     public void onClick(View v) {
         if (v == mAutoZoom) {
-		/*camera.setOneShotPreviewCallback(new Camera.PreviewCallback() {
-
-			@Override
-			public void onPreviewFrame(byte[] data, Camera camera) {
-				// TODO Auto-generated method stub
-				YuvImage img = new YuvImage(data, ImageFormat.NV21, mParams.getPreviewSize().width, mParams.getPreviewSize().height, null);
-				if(img != null)
-				{
-		            ByteArrayOutputStream stream = new ByteArrayOutputStream(data.length);
-		            img.compressToJpeg(new Rect(0, 0, img.getWidth(), img.getHeight()), 100, stream);
-
-		            Bitmap bmp = BitmapFactory.decodeByteArray(stream.toByteArray(), 0, stream.size());
-		            imageview.setImageBitmap(bmp);
-		            try {
-		                stream.close();
-		            } catch (IOException e) {
-		                e.printStackTrace();
-		            }
-		        }
-			}
-
-		});*/
 
             camera.autoFocus(new Camera.AutoFocusCallback() {
 
@@ -319,83 +284,17 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
                 }
             });
 
-			/*camera.autoFocus(new Camera.AutoFocusCallback() {
-			
-				@Override
-				public void onAutoFocus(boolean success, Camera camera) {
-					// TODO Auto-generated method stub
-					if(success)
-					{
-						mShowMessage.setText("auto foucs ok");
-						camera.takePicture(null, null, new Camera.PictureCallback() {
-			
-							@Override
-							public void onPictureTaken(byte[] data, Camera camera) {
-								// TODO Auto-generated method stub
-								Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length);
-								if (com.example.sdembeddeddemo.MainActivity.DecodeImageSD(bmp) == 0) {
-									mShowMessage.setText("decode failed");
-								}
-								else
-								{
-									String str = new String(com.example.sdembeddeddemo.MainActivity.GetResultSD());
-									if((str != null) && (!str.equalsIgnoreCase("")))
-									{
-										mShowMessage.setText("result: " + str);
-									}
-									else
-									{
-										mShowMessage.setText("decode failed");
-									}
-								}
-
-								camera.startPreview();
-							}
-						});
-					}
-				}
-			});*/
-/*		
-			camera.takePicture(null, null, new Camera.PictureCallback() {
-			
-				@Override
-				public void onPictureTaken(byte[] data, Camera camera) {
-				// TODO Auto-generated method stub
-					Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length);
-					
-					Log.e(TAG, "take picture is called");
-					if (com.example.sdembeddeddemo.MainActivity.DecodeImageSD(bmp) == 0) {
-						mShowMessage.setText("decode failed");
-					}
-					else
-					{
-						String str = new String(com.example.sdembeddeddemo.MainActivity.GetResultSD());
-						if((str != null) && (!str.equalsIgnoreCase("")))
-						{
-							mShowMessage.setText("result: " + str);
-						}
-						else
-						{
-							mShowMessage.setText("decode failed");
-						}
-					}
-
-					Log.e(TAG, "take picture is over");
-					camera.startPreview();
-				}
-			});
-*/
         } else if (v == mSetPic) {
             SizeSelectDialog sl = new SizeSelectDialog(this);
             sl.setOnDismissListener(new DialogInterface.OnDismissListener() {
 
                 @Override
                 public void onDismiss(DialogInterface dialog) {
-                    // TODO Auto-generated method stub
+
                     Camera.Size cs = mParams.getPreviewSize();
                     Camera.Size dfs = mParams.getPictureSize();
                     mShowMessage.setText(String.format("%s camera config used now\npreview %d x %d\npic %d x %d", (cam == 0 ? "back" : "front"), cs.width, cs.height, dfs.width, dfs.height));
-                    //mShowMessage.refreshDrawableState();
+
                 }
 
             });
@@ -417,7 +316,7 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
 
                     @Override
                     public void onDismiss(DialogInterface dialog) {
-                        // TODO Auto-generated method stub
+
                         Camera.Size cs = mParams.getPreviewSize();
                         Camera.Size dfs = mParams.getPictureSize();
                         mShowMessage.setText(String.format("%s camera config used now\npreview %d x %d\npic %d x %d", (cam == 0 ? "back" : "front"), cs.width, cs.height, dfs.width, dfs.height));
@@ -433,13 +332,12 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
                 try {
                     Thread.sleep(500);
                 } catch (InterruptedException e) {
-                    // TODO Auto-generated catch block
+
                     e.printStackTrace();
                 }
                 mScan.setText("start");
                 mAutoZoom.setEnabled(false);
                 mSetPic.setEnabled(true);
-                //mZoom.setEnabled(true);
                 mZoom.setText("set\npreview");
                 if (cansw) {
                     mSwCam.setEnabled(true);
@@ -453,7 +351,6 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
                 mScan.setText("stop");
                 mAutoZoom.setEnabled(true);
                 mSetPic.setEnabled(false);
-                //mZoom.setEnabled(false);
                 mZoom.setText("zoom ratio: " + ((float) mZoomRatios.get(zoom_ratio[zoom_index]) / 100));
                 if (cansw) {
                     mSwCam.setEnabled(false);
@@ -470,12 +367,10 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
                     try {
                         Thread.sleep(500);
                     } catch (InterruptedException e) {
-                        // TODO Auto-generated catch block
                         e.printStackTrace();
                     }
                 }
                 camera.release();
-//				cam = (cam == 0 ? 1 : 0);
                 if (cam == 0) {
                     cam = 1;
                 } else if (cam == 1) {
@@ -491,29 +386,12 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
                 }
             }
         }
-//		else if(v == test)
-//		{
-//			int q = 10;
-//			int ret;
-//			ret = com.spd.code.CodeUtils.ComputeAGCSD(q,g_h,g_w);
-//			if (ret == 1)
-//			{
-//				Log.e(TAG, "swiftdecoder is ok");
-//				Toast.makeText(getApplicationContext(), "ok", Toast.LENGTH_SHORT).show();
-//			}
-//			else
-//			{
-//				Log.e(TAG, "swiftdecoder is wrong");
-//				Toast.makeText(getApplicationContext(), "wrong", Toast.LENGTH_SHORT).show();
-//			}
-//		}
     }
 
     class PvSelectDialog extends Dialog implements OnClickListener, OnItemClickListener {
 
         public PvSelectDialog(Context context) {
             super(context);
-            // TODO Auto-generated constructor stub
         }
 
         private ListView lv;
@@ -522,7 +400,7 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
 
         @Override
         protected void onCreate(Bundle savedInstanceState) {
-            // TODO Auto-generated method stub
+
             super.onCreate(savedInstanceState);
             setContentView(R.layout.ss);
 
@@ -535,14 +413,12 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
 
         @Override
         public void onClick(View v) {
-            // TODO Auto-generated method stub
             dismiss();
         }
 
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position,
                                 long id) {
-            // TODO Auto-generated method stub
             Log.e(TAG, "pos is " + position + " id is " + id);
             int lvp = position;
             Toast.makeText(getApplicationContext(), ("select is " + mPreviewSize.get(lvp).width + " x " + mPreviewSize.get(lvp).height), Toast.LENGTH_LONG).show();
@@ -558,7 +434,6 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
 
         public SizeSelectDialog(Context context) {
             super(context);
-            // TODO Auto-generated constructor stub
         }
 
         private ListView lv;
@@ -567,11 +442,8 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
 
         @Override
         protected void onCreate(Bundle savedInstanceState) {
-            // TODO Auto-generated method stub
             super.onCreate(savedInstanceState);
             setContentView(R.layout.ss);
-            //调用handler
-            handler = new Handler();
 
             lv = (ListView) findViewById(R.id.listView1);
             lv.setAdapter(ap);
@@ -582,14 +454,12 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
 
         @Override
         public void onClick(View v) {
-            // TODO Auto-generated method stub
             dismiss();
         }
 
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position,
                                 long id) {
-            // TODO Auto-generated method stub
             Log.e(TAG, "pos is " + position + " id is " + id);
             int lvp = position;
             Toast.makeText(getApplicationContext(), ("select is " + mPictureSize.get(lvp).width + " x " + mPictureSize.get(lvp).height), Toast.LENGTH_LONG).show();
@@ -601,7 +471,6 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-        // TODO Auto-generated method stub
         if (camera == null) {
             camera = init_camera(cam);
         }
@@ -700,57 +569,13 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
             mShowMessage.append("not support to lock auto wb");
             Log.e("jk", "not support to lock auto wb");
         }
-		
-/*		if(mParams.isSmoothZoomSupported())
-		{
-			int zv = mParams.getMaxZoom();
-			mShowMessage.append("max support s zoom is " + zv);
-			mParams.setZoom(zv);
-		}
-		else
-		{
-			mShowMessage.append("don't support s zoom");
-		}*/
-		/*try {
-			Method gSzsd = mParams.getClass().getDeclaredMethod("getSupportedZSDMode");
-			Method szsd = mParams.getClass().getDeclaredMethod("setZSDMode", String.class);
-			if(gSzsd != null)
-			{
-					List<String> x = (List<String>) gSzsd.invoke(mParams);
-					if(x != null)
-					{
-						for(int i = 0; i < x.size(); i++)
-						{
-							Log.e(TAG, "supported zsd mode is " + x.get(i));
-						}
-					}
-			}
-			
-			if(szsd != null)
-			{
-				szsd.invoke(mParams, "on");
-			}
-			
-		} catch (NoSuchMethodException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		} catch (IllegalAccessException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IllegalArgumentException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}*/
+
         tca.setParameters(mParams);
         tca.setPreviewCallback(new Camera.PreviewCallback() {
 
             @Override
             public void onPreviewFrame(byte[] data, Camera camera) {
-                // TODO Auto-generated method stub
-                //Log.e("jk", "jk data array size is " + data.length + " w is " + g_w + " h is " + g_h + "w x h is " + (g_w * g_h));
+
                 if (!isdecode) {
                     isdecode = true;
                     mShowMessage.setText("");
@@ -761,6 +586,7 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
                     } else {
                         byte[][] resary;
                         resary = com.spd.code.CodeUtils.GetResultSD();
+
                         if (resary != null) {
                             if (soundPool != null) {
                                 soundPool.play(soundId, 1, 1, 0, 0, 1);
@@ -776,6 +602,8 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
                                     mShowMessage.append("result: " + i + " : " + str + '\n');
                                     Log.e("jk", "jk result " + i + " : " + str);
                                     i++;
+                                    // 组成一个list<>, 在页面上描绘出来  g_w和g_h
+                                    //initDrawView();
                                 }
                             }
                         } else {
@@ -796,39 +624,14 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
         Log.e(TAG, "now use preview format is " + mParams.getPreviewFormat());
         cs = mParams.getPreviewSize();
         Log.e(TAG, "now use preview size is " + cs.width + " x " + cs.height);
-		/*String zsdv = "off";
-		try {
-			Method gzsd = mParams.getClass().getDeclaredMethod("getZSDMode");
-			if(gzsd != null)
-			{
-				zsdv = (String)gzsd.invoke(mParams);
-				Log.e(TAG, "zsd mode is " + zsdv);
-			}
-			
-		} catch (NoSuchMethodException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		} catch (IllegalAccessException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IllegalArgumentException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}*/
 
-        //setCameraDisplayOrientation(this, id, tca);
         tca.setDisplayOrientation(90);
 
-        //mShowMessage.setText(String.format("%s camera config used now\npreview %d x %d\npic %d x %d", (id == 0 ? "back" : "front"), cs.width, cs.height, dfs.width, dfs.height));
         mShowMessage.append(String.format("%s camera config used now\npreview %d x %d\npic %d x %d", (id == 0 ? "back" : "front"), cs.width, cs.height, dfs.width, dfs.height));
 
         try {
             tca.setPreviewDisplay(surfaceholder);
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             tca.release();
             return null;
         } catch (Exception e) {
@@ -837,10 +640,39 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
         return tca;
     }
 
+
+    private BarcodeDrawView drawView;
+    private List<BarcodeBounds> mList;
+
+    private void initDrawView() {
+
+        int[][] kuang;
+        BarcodeBounds barcodeBounds;
+        kuang = com.spd.code.CodeUtils.GetBounds();
+        if (kuang == null) {
+            return;
+        }
+        mList = new ArrayList<>();
+        for (int i = 0; i < kuang.length; i++) {
+            barcodeBounds = new BarcodeBounds(kuang[i], g_w, g_h);
+            mList.add(barcodeBounds);
+        }
+
+        Logcat.d("mList:" + mList.toString());
+
+        if (drawView != null) {
+            relativeLayout.removeView(drawView);
+        }
+        drawView = new BarcodeDrawView(this, mList);
+        relativeLayout.addView(drawView);
+        drawView.setVisibility(View.VISIBLE);
+        drawView.bringToFront();
+
+    }
+
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width,
                                int height) {
-        // TODO Auto-generated method stub
         Log.e(TAG, "surfaceChanged is called");
         if (camera == null) {
             camera = init_camera(cam);
@@ -849,17 +681,16 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
-        // TODO Auto-generated method stub
         Log.e(TAG, "surfaceDestroyed is called");
         if (camera != null) {
             if (mScaning) {
                 Log.e(TAG, "sfdestory stop preview");
                 camera.stopPreview();
+                camera.setPreviewCallback(null);
                 mScaning = false;
                 try {
                     Thread.sleep(500);
                 } catch (InterruptedException e) {
-                    // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
             }
@@ -948,46 +779,6 @@ public class MainActivity extends Activity implements OnClickListener, Callback 
         }
     }
 
-
-    Handler handler;
-
-    /**
-     * camera2 api.使用新camera2 api方法
-     */
-    public void init(){
-        //定义宽高
-        int width = 2560;
-        int height = 1440;
-
-
-        //预览数据流最好用非JPEG
-        ImageReader imageReader = ImageReader.newInstance(width, height, ImageFormat.YV12, 1);
-        imageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
-            @Override
-            public void onImageAvailable(ImageReader reader) {
-                //最后一帧
-                Image image = reader.acquireLatestImage();
-                //do something
-                int len = image.getPlanes().length;
-                byte[][] bytes = new byte[len][];
-                int count = 0;
-                for (int i = 0; i < len; i++) {
-                    ByteBuffer buffer = image.getPlanes()[i].getBuffer();
-                    int remaining = buffer.remaining();
-                    byte[] data = new byte[remaining];
-                    byte[] _data = new byte[remaining];
-                    buffer.get(data);
-                    System.arraycopy(data, 0, _data, 0, remaining);
-                    bytes[i] = _data;
-                    count += remaining;
-                }
-                //数据流都在 bytes[][] 中，关于有几个plane，可以看查看 ImageUtils.getNumPlanesForFormat(int format);
-                // ...
-                //一定要关闭
-                image.close();
-            }
-        }, handler);
-    }
 
 
 }

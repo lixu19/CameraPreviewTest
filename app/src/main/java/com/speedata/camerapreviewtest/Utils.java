@@ -46,13 +46,6 @@ public class Utils {
             e.printStackTrace();
         }
 
-        String key = "trial-tests-tjian-03202018";
-        String path = context.getFilesDir().getAbsolutePath();
-        String url = "http://activate.speedata.cn:7070";
-
-        //int result = ActivateAPIWithLocalServer(key.getBytes(), path.getBytes(), url.getBytes(), frameBuffer, 3980);
-        //int result = ActivateAPIWithLocalServer(key.getBytes(), path.getBytes(), url.getBytes());
-        //  int result = ActivateAPIWithLocalServer();
         @SuppressLint("SdCardPath") int result = ActivateAPIWithLocalServer("/data/data/com.speedata.camerapreviewtest/IdentityClient.bin");
         //0失败,1成功
         Logcat.d("result:" + result);

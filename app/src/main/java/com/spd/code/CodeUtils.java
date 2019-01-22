@@ -22,6 +22,8 @@ public class CodeUtils {
     public static native int ActivateAPI(byte[] key, byte[] path);
     public static native int IsActivated(byte[] key, byte[] path);
 
+    public static native int[][] GetBounds();
+
     public static native int ActivateAPIWithLocalServer(byte[] key, byte[] path, byte[] url, byte[] ImageBuffer, int size);
     public static native int ActivateAPIWithLocalServer(byte[] key, byte[] path, byte[] url);
     public static native int ActivateAPIWithLocalServer(String filename);
